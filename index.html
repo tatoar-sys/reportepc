@@ -63,7 +63,7 @@
         <!-- NUEVO: DESCRIPCIÓN MANUAL -->
         <div>
             <label class="block text-sm font-medium text-gray-700">Descripción breve</label>
-            <textarea id="text-descripcion" rows="3" maxlength="80" oninput="actualizarContador()" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="Describe brevemente qué sucede..."></textarea>
+            <textarea id="text-descripcion" rows="3" maxlength="80" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="Describe brevemente qué sucede..."></textarea>
        <!-- NUEVO: Contador visual de caracteres -->
                 <p class="text-right text-xs text-gray-400 mt-1"><span id="contador-caracteres">0</span>/80 caracteres</p>
         </div>
@@ -120,8 +120,12 @@ function actualizarContador() {
             const { data: { session } } = await clienteSupabase.auth.getSession();
             if (session) {
                 mostrarFormularioReporte(session.user);
+                // NUEVO: Escuchar la escritura del textarea de forma segura
+        const textarea = document.getElementById('text-descripcion');
+        if (textarea) {
+            textarea.addEventListener('input', actualizarContador);
             }
-        }
+        };
 
         // CAMBIADO: Función de login real conectada a Supabase Auth
         async function loginReal() {
