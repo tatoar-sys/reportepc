@@ -49,8 +49,15 @@
                     <option value="MONITOR">MONITOR</option>
                     <option value="TECLADO">TECLADO</option>
                     <option value="MOUSE">MOUSE</option>
-                </select>
-            </div>
+                    <option value="OTROS">OTRO (Especificar abajo)</option>
+            </select>
+        </div>
+
+        <!-- NUEVO: DESCRIPCIÓN MANUAL -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Descripción detallada</label>
+            <textarea id="text-descripcion" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500" placeholder="Describe brevemente qué sucede..."></textarea>
+        </div>
 
             <button type="submit" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 transition">Registrar Reporte</button>
         </form>
@@ -155,7 +162,8 @@
                     { 
                         usuario_id: usuarioIdReal, // Ahora viaja el UUID correcto
                         computadora: pcSeleccionada, 
-                        tipo_error: errorSeleccionado 
+                        tipo_error: errorSeleccionado
+                        descripcion: desc
                     }
                 ]);
 
