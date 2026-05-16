@@ -24,8 +24,15 @@
                 <input type="password" id="user-password" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="••••••••">
             </div>
             <button onclick="loginReal()" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition">Ingresar</button>
+<!-- NUEVO: Texto gris con credenciales de prueba -->
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <p class="text-xs text-gray-500 font-medium">🔑 Credenciales de prueba:</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    <span class="font-semibold text-gray-500">Usuario:</span> prueba@prueba.com <br>
+                    <span class="font-semibold text-gray-500">Contraseña:</span> prueba
+                </p>
+                </div>
         </div>
-
         <!-- Formulario de Reporte -->
         <form id="report-form" class="space-y-4 hidden" onsubmit="enviarReporte(event)">
             <div class="flex justify-between items-center">
