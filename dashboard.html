@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Soporte Técnico</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- ENCABEZADO -->
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-6 rounded-xl shadow-sm gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Panel de Control Técnico</h1>
+                <p class="text-sm text-gray-500">Monitoreo de fallas y estado del laboratorio en tiempo real</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="cargarReportes()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                    🔄 Actualizar Datos
+                </button>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE MÉTRICAS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Reportes</p>
+                <p id="metrica-total" class="text-2xl font-bold text-gray-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Errores de Sistema</p>
+                <p id="metrica-sistema" class="text-2xl font-bold text-gray-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Fallas CPU / Hardware</p>
+                <p id="metrica-hardware" class="text-2xl font-bold text-gray-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Otros / Periféricos</p>
+                <p id="metrica-otros" class="text-2xl font-bold text-gray-800 mt-1">0</p>
+            </div>
+        </div>
+
+        <!-- FILTROS Y CONTENIDO PRINCIPAL -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            
+            <!-- Barra de Filtros -->
+            <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span class="text-sm font-semibold text-gray-700">Listado de Incidentes</span>
+                <div>
+                    <select id="filtro-error" onchange="filtrarTabla()" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm bg-white cursor-pointer">
+                        <option value="TODOS">🔍 Mostrar Todas las Categorías</option>
+                        <option value="ERROR DE SISTEMA OPERATIVO">SISTEMA OPERATIVO</option>
+                        <option value="CPU">CPU</option>
+                        <option value="MONITOR">MONITOR</option>
+                        <option value="TECLADO">TECLADO</option>
+                        <option value="MOUSE">MOUSE</option>
+                        <option value="OTROS">OTROS</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABLA DE DATOS -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs tracking-wider border-b border-gray-200">
+                            <th class="p-4 font-semibold">Fecha / Hora</th>
+                            <th class="p-4 font-semibold">Equipo</th>
+                            <th class="p-4 font-semibold">Tipo de Error</th>
+                            <th class="p-4 font-semibold">Descripción Técnica</th>
+                            <th class="p-4 font-semibold">ID Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-reportes-body" class="text-sm text-gray-700 divide-y divide-gray-100">
+                        <!-- Las filas se inyectan dinámicamente con JS -->
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-gray-400 font-medium">Cargando datos desde Supabase...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    // CONFIGURACIÓN SUPABASE (Usa las mismas credenciales de tu app anterior)
+    const URL_DE_SUPABASE = "https://mpopvvjhcfrhnbquoiyw.supabase.co";
+    const KEY_DE_SUPABASE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wb3B2dmpoY2ZyaG5icXVvaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODg3MzcsImV4cCI6MjA5NDQ2NDczN30.jmTkJEvZfQG88Nx32Vo_z3DYdkucesOruwIdzbX4nsQ";
+    
+    let clienteSupabase = null;
+    let todosLosReportes = []; // Cache local para filtrar sin volver a consultar la BD
+
+    try {
+        if (typeof supabase !== 'undefined') {
+            clienteSupabase = supabase.createClient(URL_DE_SUPABASE, KEY_DE_SUPABASE);
+        }
+    } catch (error) {
+        console.error("Error al inicializar Supabase en Dashboard:", error);
+    }
+
+    // Cargar los reportes de manera automática al abrir la página
+    window.onload = function() {
+        cargarReportes();
+    };
+
+    // Función principal para traer los datos desde Supabase
+    async function cargarReportes() {
+        if (!clienteSupabase) return;
+        
+        const tbody = document.getElementById('tabla-reportes-body');
+        
+        try {
+            // Hacemos el select ordenando por id de manera descendente (los más nuevos primero)
+            const { data, error } = await clienteSupabase
+                .from('reportes')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                throw error;
+            }
+
+            todosLosReportes = data || [];
+            
+            // Procesar métricas numéricas del panel
+            calcularMetricas(todosLosReportes);
+            
+            // Renderizar la tabla con la información completa
+            renderizarTabla(todosLosReportes);
+
+        } catch (error) {
+            console.error("Error al obtener reportes:", error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-red-500 font-semibold">
+                        ⚠️ Error al conectar con la base de datos: ${error.message}
+                    </td>
+                </tr>`;
+        }
+    }
+
+    // Calcula de forma automática los números de las tarjetas superiores
+    function calcularMetricas(reportes) {
+        document.getElementById('metrica-total').textContent = reportes.length;
+        
+        const sistema = reportes.filter(r => r.tipo_error === 'ERROR DE SISTEMA OPERATIVO').length;
+        const hardware = reportes.filter(r => r.tipo_error === 'CPU').length;
+        const otros = reportes.filter(r => r.tipo_error !== 'ERROR DE SISTEMA OPERATIVO' && r.tipo_error !== 'CPU').length;
+
+        document.getElementById('metrica-sistema').textContent = sistema;
+        document.getElementById('metrica-hardware').textContent = hardware;
+        document.getElementById('metrica-otros').textContent = otros;
+    }
+
+    // Pinta las filas de la tabla según los datos recibidos
+    function renderizarTabla(reportes) {
+        const tbody = document.getElementById('tabla-reportes-body');
+        
+        if (reportes.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="p-8 text-center text-gray-400 font-medium">
+                        No se encontraron reportes registrados.
+                    </td>
+                </tr>`;
+            return;
+        }
+
+        tbody.innerHTML = ""; // Limpiamos la tabla
+
+        reportes.forEach(reporte => {
+            const fila = document.createElement('tr');
+            fila.className = "hover:bg-gray-50 transition";
+
+            // Formatear la fecha (por si viene tipo timestamp, extraer lo básico)
+            let fechaFormateada = "N/A";
+            if (reporte.created_at) {
+                const date = new Date(reporte.created_at);
+                fechaFormateada = date.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            } else {
+                // Si tu tabla no tiene created_at, usamos un marcador o aproximación
+                fechaFormateada = `Reporte #${reporte.id}`;
+            }
+
+            // Estilos CSS condicionales rápidos según el tipo de error
+            let badgeColor = "bg-gray-100 text-gray-700";
+            if (reporte.tipo_error === 'ERROR DE SISTEMA OPERATIVO') badgeColor = "bg-amber-100 text-amber-800 font-medium";
+            if (reporte.tipo_error === 'CPU') badgeColor = "bg-red-100 text-red-800 font-medium";
+            if (reporte.tipo_error === 'MONITOR') badgeColor = "bg-blue-100 text-blue-800";
+
+            fila.innerHTML = `
+                <td class="p-4 text-xs font-mono text-gray-500 whitespace-nowrap">${fechaFormateada}</td>
+                <td class="p-4 font-bold text-gray-900">PC ${reporte.computadora || 'S/N'}</td>
+                <td class="p-4">
+                    <span class="px-2 py-1 rounded text-xs uppercase tracking-tight ${badgeColor}">
+                        ${reporte.tipo_error}
+                    </span>
+                </td>
+                <td class="p-4 text-gray-600 max-w-xs truncate" title="${reporte.descripcion || ''}">
+                    ${reporte.descripcion || '<span class="text-gray-300 italic">Sin descripción</span>'}
+                </td>
+                <td class="p-4 text-xs font-mono text-gray-400 truncate max-w-[100px]" title="${reporte.usuario_id || ''}">
+                    ${reporte.usuario_id ? reporte.usuario_id.substring(0, 8) + '...' : 'Anónimo'}
+                </td>
+            `;
+            tbody.appendChild(fila);
+        });
+    }
+
+    // Filtra los datos almacenados localmente sin recargar desde Supabase
+    function filtrarTabla() {
+        const categoriaSeleccionada = document.getElementById('filtro-error').value;
+        
+        if (categoriaSeleccionada === 'TODOS') {
+            renderizarTabla(todosLosReportes);
+        } else {
+            const reportesFiltrados = todosLosReportes.filter(r => r.tipo_error === categoriaSeleccionada);
+            renderizarTabla(reportesFiltrados);
+        }
+    }
+</script>
+
+</body>
+</html>
