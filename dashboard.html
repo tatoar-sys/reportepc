@@ -30,8 +30,8 @@
             </div>
         </div>
 
-        <!-- TARJETAS DE MÉTRICAS -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- TARJETAS DE MÉTRICAS (Actualizado a 5 columnas en pantallas grandes) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Reportes</p>
                 <p id="metrica-total" class="text-2xl font-bold text-gray-800 mt-1">0</p>
@@ -47,6 +47,19 @@
             <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Otros / Periféricos</p>
                 <p id="metrica-otros" class="text-2xl font-bold text-gray-800 mt-1">0</p>
+            </div>
+            <!-- NUEVA TARJETA: PC con más fallas -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Equipo Más Crítico</p>
+                <p id="metrica-critico" class="text-lg font-bold text-gray-800 mt-1 truncate">--</p>
+            </div>
+        </div>
+
+        <!-- NUEVO TABLERO: RANKING DE COMPUTADORAS CON MÁS REPORTES -->
+        <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">📊 Top 5: Computadoras con más Reportes</h3>
+            <div id="ranking-pcs-container" class="space-y-3">
+                <p class="text-xs text-gray-400 italic">Calculando estadísticas...</p>
             </div>
         </div>
 
@@ -94,7 +107,7 @@
     </div>
 
 <script>
-    // CONFIGURACIÓN SUPABASE (Usa las mismas credenciales de tu app anterior)
+    // CONFIGURACIÓN SUPABASE
     const URL_DE_SUPABASE = "https://mpopvvjhcfrhnbquoiyw.supabase.co";
     const KEY_DE_SUPABASE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wb3B2dmpoY2ZyaG5icXVvaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODg3MzcsImV4cCI6MjA5NDQ2NDczN30.jmTkJEvZfQG88Nx32Vo_z3DYdkucesOruwIdzbX4nsQ";
     
@@ -133,7 +146,7 @@
 
             todosLosReportes = data || [];
             
-            // Procesar métricas numéricas del panel
+            // Procesar métricas numéricas del panel y graficar ranking
             calcularMetricas(todosLosReportes);
             
             // Renderizar la tabla con la información completa
@@ -150,7 +163,7 @@
         }
     }
 
-    // Calcula de forma automática los números de las tarjetas superiores
+    // NUEVA VERSIÓN: Calcula las métricas tradicionales y computa el ranking gráfico por PC
     function calcularMetricas(reportes) {
         document.getElementById('metrica-total').textContent = reportes.length;
         
@@ -161,6 +174,54 @@
         document.getElementById('metrica-sistema').textContent = sistema;
         document.getElementById('metrica-hardware').textContent = hardware;
         document.getElementById('metrica-otros').textContent = otros;
+
+        // Lógica de cálculo estadístico para el ranking de PCs
+        if (reportes.length === 0) {
+            document.getElementById('metrica-critico').textContent = "Ninguna";
+            document.getElementById('ranking-pcs-container').innerHTML = `<p class="text-sm text-gray-400 italic">Sin datos suficientes para el ranking.</p>`;
+            return;
+        }
+
+        // Contar la frecuencia de fallas por cada equipo
+        const conteoPCs = {};
+        reportes.forEach(r => {
+            const pc = r.computadora || "Desconocida";
+            conteoPCs[pc] = (conteoPCs[pc] || 0) + 1;
+        });
+
+        // Mapear y ordenar los pares [PC, cantidad] de mayor a menor
+        const rankingOrdenado = Object.entries(conteoPCs)
+            .map(([pc, cantidad]) => ({ pc, cantidad }))
+            .sort((a, b) => b.cantidad - a.cantidad);
+
+        // Definir e inyectar el equipo más problemático en la quinta tarjeta
+        const masCritica = rankingOrdenado[0];
+        document.getElementById('metrica-critico').textContent = `PC ${masCritica.pc} (${masCritica.cantidad})`;
+
+        // Renderizado del contenedor dinámico de barras
+        const rankingContainer = document.getElementById('ranking-pcs-container');
+        rankingContainer.innerHTML = ""; 
+
+        const maxReportesParaPorcentaje = masCritica.cantidad; 
+        const top5 = rankingOrdenado.slice(0, 5);
+
+        top5.forEach(item => {
+            // Regla de tres simple para determinar el ancho de la barra
+            const porcentaje = (item.cantidad / maxReportesParaPorcentaje) * 100;
+
+            const barraHTML = `
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-medium text-gray-600">
+                        <span class="font-bold text-gray-700">Computadora ${item.pc}</span>
+                        <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">${item.cantidad} fallos</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div class="bg-purple-600 h-3 rounded-full transition-all duration-500" style="width: ${porcentaje}%"></div>
+                    </div>
+                </div>
+            `;
+            rankingContainer.insertAdjacentHTML('beforeend', barraHTML);
+        });
     }
 
     // Pinta las filas de la tabla según los datos recibidos
@@ -177,23 +238,20 @@
             return;
         }
 
-        tbody.innerHTML = ""; // Limpiamos la tabla
+        tbody.innerHTML = ""; 
 
         reportes.forEach(reporte => {
             const fila = document.createElement('tr');
             fila.className = "hover:bg-gray-50 transition";
 
-            // Formatear la fecha (por si viene tipo timestamp, extraer lo básico)
             let fechaFormateada = "N/A";
             if (reporte.created_at) {
                 const date = new Date(reporte.created_at);
                 fechaFormateada = date.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
             } else {
-                // Si tu tabla no tiene created_at, usamos un marcador o aproximación
                 fechaFormateada = `Reporte #${reporte.id}`;
             }
 
-            // Estilos CSS condicionales rápidos según el tipo de error
             let badgeColor = "bg-gray-100 text-gray-700";
             if (reporte.tipo_error === 'ERROR DE SISTEMA OPERATIVO') badgeColor = "bg-amber-100 text-amber-800 font-medium";
             if (reporte.tipo_error === 'CPU') badgeColor = "bg-red-100 text-red-800 font-medium";
