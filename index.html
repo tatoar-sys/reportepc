@@ -37,9 +37,15 @@
 
         <!-- Formulario de Reporte -->
         <form id="report-form" class="space-y-4 hidden" onsubmit="enviarReporte(event)">
-            <div class="flex justify-between items-center">
-                <p class="text-sm text-gray-600">Sesión activa: <span id="active-user" class="font-semibold text-blue-600"></span></p>
-                <button type="button" onclick="cerrarSesion()" class="text-xs text-red-600 hover:underline">Cerrar Sesión</button>
+            <div class="flex flex-col gap-2 p-3 bg-blue-50 rounded-lg">
+                <div class="flex justify-between items-center">
+                    <p class="text-sm text-gray-600">Sesión activa: <span id="active-user" class="font-semibold text-blue-600"></span></p>
+                    <button type="button" onclick="cerrarSesion()" class="text-xs text-red-600 hover:underline font-medium">Cerrar Sesión</button>
+                </div>
+                <!-- NUEVO: Botón de acceso al Dashboard -->
+                <a href="dashboard.html" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded transition uppercase tracking-wider block mt-1">
+                    📊 Ir al Dashboard Técnico
+                </a>
             </div>
             
             <div>
