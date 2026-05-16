@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Errores de PC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Reportar Error de PC</h2>
+        
+        <!-- Formulario de Login REAL -->
+        <div id="login-section" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Usuario / Email</label>
+                <input type="email" id="user-email" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="tu-email@correo.com">
+            </div>
+            <!-- NUEVO: Campo de contraseña -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Contraseña</label>
+                <input type="password" id="user-password" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="••••••••">
+            </div>
+            <button onclick="loginReal()" class="w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition">Ingresar</button>
+        </div>
+
+        <!-- Formulario de Reporte -->
+        <form id="report-form" class="space-y-4 hidden" onsubmit="enviarReporte(event)">
+            <div class="flex justify-between items-center">
+                <p class="text-sm text-gray-600">Sesión activa: <span id="active-user" class="font-semibold text-blue-600"></span></p>
+                <button type="button" onclick="cerrarSesion()" class="text-xs text-red-600 hover:underline">Cerrar Sesión</button>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Seleccionar Computadora</label>
+                <select id="select-pc" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white" required>
+                    <option value="">-- Seleccione una PC --</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tipo de Error</label>
+                <select id="select-error" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white" required>
+                    <option value="">-- Seleccione el Error --</option>
+                    <option value="ERROR DE SISTEMA OPERATIVO">ERROR DE SISTEMA OPERATIVO</option>
+                    <option value="CPU">CPU</option>
+                    <option value="MONITOR">MONITOR</option>
+                    <option value="TECLADO">TECLADO</option>
+                    <option value="MOUSE">MOUSE</option>
+                </select>
+            </div>
+
+            <button type="submit" class="w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700 transition">Registrar Reporte</button>
+        </form>
+    </div>
+
+<script>
+        const URL_DE_SUPABASE = "https://mpopvvjhcfrhnbquoiyw.supabase.co";
+        const KEY_DE_SUPABASE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wb3B2dmpoY2ZyaG5icXVvaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODg3MzcsImV4cCI6MjA5NDQ2NDczN30.jmTkJEvZfQG88Nx32Vo_z3DYdkucesOruwIdzbX4nsQ";
+        
+        let clienteSupabase = null;
+        let usuarioIdReal = ""; // Aquí guardaremos el UUID real que nos dé Supabase
+
+        try {
+            if (typeof supabase !== 'undefined') {
+                clienteSupabase = supabase.createClient(URL_DE_SUPABASE, KEY_DE_SUPABASE);
+            }
+        } catch (error) {
+            console.error("Error al conectar con Supabase:", error);
+        }
+
+        window.onload = function() {
+            // 1. Generar lista de PCs
+            const selectPc = document.getElementById('select-pc');
+            if (selectPc) {
+                const letras = ['A', 'B', 'C', 'D', 'E'];
+                letras.forEach(letra => {
+                    for (let i = 1; i <= 5; i++) {
+                        const opcion = `${letra}${i}`;
+                        const el = document.createElement('option');
+                        el.value = opcion;
+                        el.textContent = opcion;
+                        selectPc.appendChild(el);
+                    }
+                });
+            }
+            // 2. Verificar si el usuario ya estaba logueado
+            verificarSesionActiva();
+        };
+
+        // NUEVO: Comprueba si hay una sesión guardada en el navegador
+        async function verificarSesionActiva() {
+            if (!clienteSupabase) return;
+            const { data: { session } } = await clienteSupabase.auth.getSession();
+            if (session) {
+                mostrarFormularioReporte(session.user);
+            }
+        }
+
+        // CAMBIADO: Función de login real conectada a Supabase Auth
+        async function loginReal() {
+            const correo = document.getElementById('user-email').value.trim();
+            const contrasena = document.getElementById('user-password').value;
+            
+            if (correo === "" || contrasena === "") {
+                alert("Por favor, completa todos los campos.");
+                return;
+            }
+
+            // Petición de autenticación
+            const { data, error } = await clienteSupabase.auth.signInWithPassword({
+                email: correo,
+                password: contrasena
+            });
+
+            if (error) {
+                alert("Error al iniciar sesión: " + error.message);
+            } else {
+                mostrarFormularioReporte(data.user);
+            }
+        }
+
+        // Función auxiliar para cambiar de pantalla
+        function mostrarFormularioReporte(user) {
+            usuarioIdReal = user.id; // ¡AQUÍ ESTÁ EL UUID REAL! (ej: "123e4567-e89b...")
+            document.getElementById('active-user').textContent = user.email;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('report-form').classList.remove('hidden');
+        }
+
+        // NUEVO: Función para cerrar sesión
+        async function cerrarSesion() {
+            await clienteSupabase.auth.signOut();
+            usuarioIdReal = "";
+            document.getElementById('user-password').value = "";
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('report-form').classList.add('hidden');
+        }
+
+        // ENVÍO DEL REPORTE CON EL UUID REAL
+        async function enviarReporte(event) {
+            event.preventDefault();
+            
+            const pcSeleccionada = document.getElementById('select-pc').value;
+            const errorSeleccionado = document.getElementById('select-error').value;
+
+            if (!clienteSupabase) return;
+
+            // Guardar en la tabla 'reportes' enviando el UUID verificado
+            const { data, error } = await clienteSupabase
+                .from('reportes')
+                .insert([
+                    { 
+                        usuario_id: usuarioIdReal, // Ahora viaja el UUID correcto
+                        computadora: pcSeleccionada, 
+                        tipo_error: errorSeleccionado 
+                    }
+                ]);
+
+            if (error) {
+                alert("Error al guardar en la base de datos: " + error.message);
+            } else {
+                alert(`¡Reporte registrado! PC: ${pcSeleccionada}`);
+                document.getElementById('select-pc').value = "";
+                document.getElementById('select-error').value = "";
+            }
+        }
+</script>
+    
+</body>
+</html>
