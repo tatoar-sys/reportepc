@@ -113,14 +113,13 @@ function actualizarContador() {
             // 2. Verificar si el usuario ya estaba logueado
             verificarSesionActiva();
         };
-
-        // NUEVO: Comprueba si hay una sesión guardada en el navegador
+ // NUEVO: Comprueba si hay una sesión guardada en el navegador
         async function verificarSesionActiva() {
             if (!clienteSupabase) return;
             const { data: { session } } = await clienteSupabase.auth.getSession();
             if (session) {
                 mostrarFormularioReporte(session.user);
-                // NUEVO: Escuchar la escritura del textarea de forma segura
+ // NUEVO: Escuchar la escritura del textarea de forma segura
         const textarea = document.getElementById('text-descripcion');
         if (textarea) {
             textarea.addEventListener('input', actualizarContador);
@@ -195,6 +194,7 @@ function actualizarContador() {
                 alert(`¡Reporte registrado! PC: ${pcSeleccionada}`);
                 document.getElementById('select-pc').value = "";
                 document.getElementById('select-error').value = "";
+                actualizarContador(); // Vuelve el contador a 0
             }
         }
 </script>
