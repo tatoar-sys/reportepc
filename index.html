@@ -152,6 +152,7 @@
             
             const pcSeleccionada = document.getElementById('select-pc').value;
             const errorSeleccionado = document.getElementById('select-error').value;
+            const descripcionIngresada = document.getElementById('text-descripcion').value; //se agrego este valor
 
             if (!clienteSupabase) return;
 
@@ -163,7 +164,7 @@
                         usuario_id: usuarioIdReal, // Ahora viaja el UUID correcto
                         computadora: pcSeleccionada, 
                         tipo_error: errorSeleccionado,
-                        descripcion: desc
+                        descripcion: descripcionIngresada //Envia Descripcion
                     }
                 ]);
 
