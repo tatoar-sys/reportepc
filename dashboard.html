@@ -4,23 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Soporte Técnico</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
 
     <div class="max-w-6xl mx-auto space-y-6">
-        
-        <!-- ENCABEZADO -->
         <div class="flex flex-col md:flex-row md:justify-between md:items-center bg-white p-6 rounded-xl shadow-sm gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Panel de Control Técnico</h1>
-                <p class="text-sm text-gray-500">Monitoreo de fallas y estado del laboratorio en tiempo real</p>
+                <p class="text-sm text-gray-500">Monitoreo de fallas y estado del laboratorio</p>
             </div>
             <div class="flex items-center gap-3">
-               <!-- NUEVO: Enlace para regresar al formulario -->
                 <a href="index.html" class="border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm transition">
                     ⬅️ Volver al Formulario
                 </a>
@@ -30,7 +24,6 @@
             </div>
         </div>
 
-        <!-- TARJETAS DE MÉTRICAS (Actualizado a 5 columnas en pantallas grandes) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Reportes</p>
@@ -48,14 +41,12 @@
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Otros / Periféricos</p>
                 <p id="metrica-otros" class="text-2xl font-bold text-gray-800 mt-1">0</p>
             </div>
-            <!-- NUEVA TARJETA: PC con más fallas -->
             <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-600">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Equipo Más Crítico</p>
                 <p id="metrica-critico" class="text-lg font-bold text-gray-800 mt-1 truncate">--</p>
             </div>
         </div>
 
-        <!-- NUEVO TABLERO: RANKING DE COMPUTADORAS CON MÁS REPORTES -->
         <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
             <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">📊 Top 5: Computadoras con más Reportes</h3>
             <div id="ranking-pcs-container" class="space-y-3">
@@ -63,10 +54,7 @@
             </div>
         </div>
 
-        <!-- FILTROS Y CONTENIDO PRINCIPAL -->
         <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            
-            <!-- Barra de Filtros -->
             <div class="p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <span class="text-sm font-semibold text-gray-700">Listado de Incidentes</span>
                 <div>
@@ -81,8 +69,6 @@
                     </select>
                 </div>
             </div>
-
-            <!-- TABLA DE DATOS -->
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -91,82 +77,55 @@
                             <th class="p-4 font-semibold">Equipo</th>
                             <th class="p-4 font-semibold">Tipo de Error</th>
                             <th class="p-4 font-semibold">Descripción Técnica</th>
-                            <th class="p-4 font-semibold">ID Usuario</th>
+                            <th class="p-4 font-semibold">Correo</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-reportes-body" class="text-sm text-gray-700 divide-y divide-gray-100">
-                        <!-- Las filas se inyectan dinámicamente con JS -->
                         <tr>
-                            <td colspan="5" class="p-8 text-center text-gray-400 font-medium">Cargando datos desde Supabase...</td>
+                            <td colspan="5" class="p-8 text-center text-gray-400 font-medium">Cargando reportes desde Google Sheets...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
     </div>
 
+<script src="config.js"></script>
 <script>
-    // CONFIGURACIÓN SUPABASE
-    const URL_DE_SUPABASE = "https://mpopvvjhcfrhnbquoiyw.supabase.co";
-    const KEY_DE_SUPABASE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wb3B2dmpoY2ZyaG5icXVvaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4ODg3MzcsImV4cCI6MjA5NDQ2NDczN30.jmTkJEvZfQG88Nx32Vo_z3DYdkucesOruwIdzbX4nsQ";
-    
-    let clienteSupabase = null;
-    let todosLosReportes = []; // Cache local para filtrar sin volver a consultar la BD
+    let todosLosReportes = [];
 
-    try {
-        if (typeof supabase !== 'undefined') {
-            clienteSupabase = supabase.createClient(URL_DE_SUPABASE, KEY_DE_SUPABASE);
-        }
-    } catch (error) {
-        console.error("Error al inicializar Supabase en Dashboard:", error);
-    }
+    window.onload = cargarReportes;
 
-    // Cargar los reportes de manera automática al abrir la página
-    window.onload = function() {
-        cargarReportes();
-    };
-
-    // Función principal para traer los datos desde Supabase
-    async function cargarReportes() {
-        if (!clienteSupabase) return;
-        
+    function cargarReportes() {
         const tbody = document.getElementById('tabla-reportes-body');
-        
-        try {
-            // Hacemos el select ordenando por id de manera descendente (los más nuevos primero)
-            const { data, error } = await clienteSupabase
-                .from('reportes')
-                .select('*')
-                .order('id', { ascending: false });
+        tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400 font-medium">Cargando reportes desde Google Sheets...</td></tr>';
 
-            if (error) {
-                throw error;
+        llamarApiAppsScript('listar', null, function(resultado) {
+            if (!resultado.ok) {
+                mostrarError(resultado.error);
+                return;
             }
-
-            todosLosReportes = data || [];
-            
-            // Procesar métricas numéricas del panel y graficar ranking
+            todosLosReportes = resultado.reportes;
             calcularMetricas(todosLosReportes);
-            
-            // Renderizar la tabla con la información completa
             renderizarTabla(todosLosReportes);
+        }, mostrarError);
 
-        } catch (error) {
-            console.error("Error al obtener reportes:", error);
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-red-500 font-semibold">
-                        ⚠️ Error al conectar con la base de datos: ${error.message}
-                    </td>
-                </tr>`;
+        function mostrarError(error) {
+            console.error('Error al obtener reportes:', error);
+            tbody.innerHTML = '';
+            const fila = document.createElement('tr');
+            const celda = document.createElement('td');
+            celda.colSpan = 5;
+            celda.className = 'p-8 text-center text-red-500 font-semibold';
+            celda.textContent = '⚠️ Error al cargar reportes: ' + error;
+            fila.appendChild(celda);
+            tbody.appendChild(fila);
         }
     }
 
-    // NUEVA VERSIÓN: Calcula las métricas tradicionales y computa el ranking gráfico por PC
     function calcularMetricas(reportes) {
         document.getElementById('metrica-total').textContent = reportes.length;
-        
+
         const sistema = reportes.filter(r => r.tipo_error === 'ERROR DE SISTEMA OPERATIVO').length;
         const hardware = reportes.filter(r => r.tipo_error === 'CPU').length;
         const otros = reportes.filter(r => r.tipo_error !== 'ERROR DE SISTEMA OPERATIVO' && r.tipo_error !== 'CPU').length;
@@ -175,118 +134,123 @@
         document.getElementById('metrica-hardware').textContent = hardware;
         document.getElementById('metrica-otros').textContent = otros;
 
-        // Lógica de cálculo estadístico para el ranking de PCs
-        if (reportes.length === 0) {
-            document.getElementById('metrica-critico').textContent = "Ninguna";
-            document.getElementById('ranking-pcs-container').innerHTML = `<p class="text-sm text-gray-400 italic">Sin datos suficientes para el ranking.</p>`;
-            return;
-        }
-
-        // Contar la frecuencia de fallas por cada equipo
-        const conteoPCs = {};
-        reportes.forEach(r => {
-            const pc = r.computadora || "Desconocida";
-            conteoPCs[pc] = (conteoPCs[pc] || 0) + 1;
-        });
-
-        // Mapear y ordenar los pares [PC, cantidad] de mayor a menor
-        const rankingOrdenado = Object.entries(conteoPCs)
+        const ranking = Object.entries(reportes.reduce((conteo, reporte) => {
+            const pc = reporte.computadora || 'Desconocida';
+            conteo[pc] = (conteo[pc] || 0) + 1;
+            return conteo;
+        }, {}))
             .map(([pc, cantidad]) => ({ pc, cantidad }))
             .sort((a, b) => b.cantidad - a.cantidad);
 
-        // Definir e inyectar el equipo más problemático en la quinta tarjeta
-        const masCritica = rankingOrdenado[0];
-        document.getElementById('metrica-critico').textContent = `PC ${masCritica.pc} (${masCritica.cantidad})`;
-
-        // Renderizado del contenedor dinámico de barras
         const rankingContainer = document.getElementById('ranking-pcs-container');
-        rankingContainer.innerHTML = ""; 
+        rankingContainer.replaceChildren();
 
-        const maxReportesParaPorcentaje = masCritica.cantidad; 
-        const top5 = rankingOrdenado.slice(0, 5);
-
-        top5.forEach(item => {
-            // Regla de tres simple para determinar el ancho de la barra
-            const porcentaje = (item.cantidad / maxReportesParaPorcentaje) * 100;
-
-            const barraHTML = `
-                <div class="space-y-1">
-                    <div class="flex justify-between text-xs font-medium text-gray-600">
-                        <span class="font-bold text-gray-700">Computadora ${item.pc}</span>
-                        <span class="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">${item.cantidad} fallos</span>
-                    </div>
-                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                        <div class="bg-purple-600 h-3 rounded-full transition-all duration-500" style="width: ${porcentaje}%"></div>
-                    </div>
-                </div>
-            `;
-            rankingContainer.insertAdjacentHTML('beforeend', barraHTML);
-        });
-    }
-
-    // Pinta las filas de la tabla según los datos recibidos
-    function renderizarTabla(reportes) {
-        const tbody = document.getElementById('tabla-reportes-body');
-        
-        if (reportes.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-8 text-center text-gray-400 font-medium">
-                        No se encontraron reportes registrados.
-                    </td>
-                </tr>`;
+        if (ranking.length === 0) {
+            document.getElementById('metrica-critico').textContent = 'Ninguna';
+            const mensaje = document.createElement('p');
+            mensaje.className = 'text-sm text-gray-400 italic';
+            mensaje.textContent = 'Sin datos suficientes para el ranking.';
+            rankingContainer.appendChild(mensaje);
             return;
         }
 
-        tbody.innerHTML = ""; 
+        const equipoCritico = ranking[0];
+        document.getElementById('metrica-critico').textContent = `PC ${equipoCritico.pc} (${equipoCritico.cantidad})`;
+
+        ranking.slice(0, 5).forEach(item => {
+            const contenedor = document.createElement('div');
+            contenedor.className = 'space-y-1';
+
+            const datos = document.createElement('div');
+            datos.className = 'flex justify-between text-xs font-medium text-gray-600';
+            const nombre = document.createElement('span');
+            nombre.className = 'font-bold text-gray-700';
+            nombre.textContent = `Computadora ${item.pc}`;
+            const cantidad = document.createElement('span');
+            cantidad.className = 'bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold';
+            cantidad.textContent = `${item.cantidad} fallos`;
+            datos.append(nombre, cantidad);
+
+            const fondo = document.createElement('div');
+            fondo.className = 'w-full bg-gray-100 rounded-full h-3 overflow-hidden';
+            const barra = document.createElement('div');
+            barra.className = 'bg-purple-600 h-3 rounded-full transition-all duration-500';
+            barra.style.width = `${(item.cantidad / equipoCritico.cantidad) * 100}%`;
+            fondo.appendChild(barra);
+            contenedor.append(datos, fondo);
+            rankingContainer.appendChild(contenedor);
+        });
+    }
+
+    function renderizarTabla(reportes) {
+        const tbody = document.getElementById('tabla-reportes-body');
+        tbody.replaceChildren();
+
+        if (reportes.length === 0) {
+            const fila = document.createElement('tr');
+            const celda = document.createElement('td');
+            celda.colSpan = 5;
+            celda.className = 'p-8 text-center text-gray-400 font-medium';
+            celda.textContent = 'No se encontraron reportes registrados.';
+            fila.appendChild(celda);
+            tbody.appendChild(fila);
+            return;
+        }
 
         reportes.forEach(reporte => {
             const fila = document.createElement('tr');
-            fila.className = "hover:bg-gray-50 transition";
+            fila.className = 'hover:bg-gray-50 transition';
 
-            let fechaFormateada = "N/A";
-            if (reporte.created_at) {
-                const date = new Date(reporte.created_at);
-                fechaFormateada = date.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-            } else {
-                fechaFormateada = `Reporte #${reporte.id}`;
-            }
+            const fecha = new Date(reporte.created_at);
+            const fechaFormateada = Number.isNaN(fecha.getTime())
+                ? 'N/A'
+                : fecha.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+            agregarCelda(fila, fechaFormateada, 'p-4 text-xs font-mono text-gray-500 whitespace-nowrap');
+            agregarCelda(fila, `PC ${reporte.computadora || 'S/N'}`, 'p-4 font-bold text-gray-900');
 
-            let badgeColor = "bg-gray-100 text-gray-700";
-            if (reporte.tipo_error === 'ERROR DE SISTEMA OPERATIVO') badgeColor = "bg-amber-100 text-amber-800 font-medium";
-            if (reporte.tipo_error === 'CPU') badgeColor = "bg-red-100 text-red-800 font-medium";
-            if (reporte.tipo_error === 'MONITOR') badgeColor = "bg-blue-100 text-blue-800";
+            const tipo = document.createElement('td');
+            tipo.className = 'p-4';
+            const etiqueta = document.createElement('span');
+            let color = 'bg-gray-100 text-gray-700';
+            if (reporte.tipo_error === 'ERROR DE SISTEMA OPERATIVO') color = 'bg-amber-100 text-amber-800 font-medium';
+            if (reporte.tipo_error === 'CPU') color = 'bg-red-100 text-red-800 font-medium';
+            if (reporte.tipo_error === 'MONITOR') color = 'bg-blue-100 text-blue-800';
+            etiqueta.className = `px-2 py-1 rounded text-xs uppercase tracking-tight ${color}`;
+            etiqueta.textContent = reporte.tipo_error || 'Sin categoría';
+            tipo.appendChild(etiqueta);
+            fila.appendChild(tipo);
 
-            fila.innerHTML = `
-                <td class="p-4 text-xs font-mono text-gray-500 whitespace-nowrap">${fechaFormateada}</td>
-                <td class="p-4 font-bold text-gray-900">PC ${reporte.computadora || 'S/N'}</td>
-                <td class="p-4">
-                    <span class="px-2 py-1 rounded text-xs uppercase tracking-tight ${badgeColor}">
-                        ${reporte.tipo_error}
-                    </span>
-                </td>
-                <td class="p-4 text-gray-600 max-w-xs truncate" title="${reporte.descripcion || ''}">
-                    ${reporte.descripcion || '<span class="text-gray-300 italic">Sin descripción</span>'}
-                </td>
-                <td class="p-4 text-xs font-mono text-gray-400 truncate max-w-[100px]" title="${reporte.usuario_id || ''}">
-                    ${reporte.usuario_id ? reporte.usuario_id.substring(0, 8) + '...' : 'Anónimo'}
-                </td>
-            `;
+            const descripcion = document.createElement('td');
+            descripcion.className = 'p-4 text-gray-600 max-w-xs truncate';
+            descripcion.title = reporte.descripcion || '';
+            descripcion.textContent = reporte.descripcion || 'Sin descripción';
+            if (!reporte.descripcion) descripcion.classList.add('italic', 'text-gray-300');
+            fila.appendChild(descripcion);
+
+            const correo = document.createElement('td');
+            correo.className = 'p-4 text-xs font-mono text-gray-400 truncate max-w-[180px]';
+            correo.title = reporte.usuario_email || '';
+            correo.textContent = reporte.usuario_email || 'Anónimo';
+            fila.appendChild(correo);
             tbody.appendChild(fila);
         });
     }
 
-    // Filtra los datos almacenados localmente sin recargar desde Supabase
-    function filtrarTabla() {
-        const categoriaSeleccionada = document.getElementById('filtro-error').value;
-        
-        if (categoriaSeleccionada === 'TODOS') {
-            renderizarTabla(todosLosReportes);
-        } else {
-            const reportesFiltrados = todosLosReportes.filter(r => r.tipo_error === categoriaSeleccionada);
-            renderizarTabla(reportesFiltrados);
-        }
+    function agregarCelda(fila, texto, clase) {
+        const celda = document.createElement('td');
+        celda.className = clase;
+        celda.textContent = texto;
+        fila.appendChild(celda);
     }
+
+    function filtrarTabla() {
+        const categoria = document.getElementById('filtro-error').value;
+        const reportesFiltrados = categoria === 'TODOS'
+            ? todosLosReportes
+            : todosLosReportes.filter(reporte => reporte.tipo_error === categoria);
+        renderizarTabla(reportesFiltrados);
+    }
+
 </script>
 
 </body>
