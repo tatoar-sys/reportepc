@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = '';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZqtepsMRzgcecx5nHjXJoBpxCkWo40LRArSz9EeL_cQo5qhQT9lNHC9-9WJSNNEzYhg/exec';
 
 function llamarApiAppsScript(accion, datos, alCompletar, alFallar) {
     if (!APPS_SCRIPT_URL) {
